@@ -11,7 +11,7 @@ AMPLITUDE = "amplitude_chart_id"
 AT = "AT_request"
 GSHEETS_OUT = "export_google_sheets"
 ALERT_IF = "alert_if"
-ALERT_TEXT = "alert_text"
+ALERT_TEXT = "description"
 ALERT_CHANNEL = "alert_slack_channel"
 SCHEDULING = "schedule_days"
 
