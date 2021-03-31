@@ -1,0 +1,27 @@
+version: "3.7"
+
+services:
+  metabase:
+    image: metabase/metabase
+    ports:
+      - "${METABASE_PORT}:3000"
+    volumes:
+      - ../../persistance/metabase-data:/metabase-data
+    depends_on:
+      - db_metabase
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: metabase
+      MB_DB_HOST: db_zep_meta
+
+  db_metabase:
+    image: postgres
+    environment:
+      POSTGRES_PASSWORD: metabase
+      POSTGRES_USER: metabase
+      POSTGRES_DB: metabase
+    volumes:
+      - ../../persistance/database:/var/lib/postgresql/data
