@@ -5,6 +5,8 @@ from functools import reduce
 from datetime import date, timedelta
 import datetime as dt
 import calendar
+import traceback
+
 
 #constants: toml entries
 AMPLITUDE = "amplitude_chart_id" 
@@ -31,7 +33,7 @@ def check_one_input(jobdef, job_name):
 
 def check_alert(jobdef, job_name):
     """Checks alert conf. return true if an alert is configured, false if not """
-    if _count([ALERT_IF, ALERT_CHANNEL, ALERT_TEXT], jobdef) == 0: #no alert configured
+    if _count([ALERT_IF, ALERT_CHANNEL], jobdef) == 0: #no alert configured
         return False
     if ALERT_IF not in jobdef :
         raise Exception(f"job {job_name} : il faut configurer un '{ALERT_IF}'' pour définir une alerte")
@@ -96,7 +98,8 @@ def check_schedule(schedule):
     return result
 
 #--------------- interpret
-def interpret_job(log, jobdef, job_name):
+
+def _interpret_job(log, jobdef, job_name):
     """Interpret the job definition and execute the job"""
     if SCHEDULING in jobdef and not check_schedule(jobdef[SCHEDULING]):
         log.info(f"No execution of this job today (scheduling : '{jobdef[SCHEDULING]}')")
@@ -143,3 +146,11 @@ def interpret_job(log, jobdef, job_name):
             log.info(f"pas d'alerte : {_condition} (actual : {actual})")
         
             
+def interpret_job(log, jobdef, job_name):
+    try:
+        return _interpret_job(log, jobdef, job_name)
+    except Exception as err:
+        con.init_slack()
+        log.error(f"Impossible d'interpréter le job {job_name}")
+        log.error(traceback.format_exc())
+        con.send_slack(f"Impossible d'interpréter le job {job_name}", "alertbot-erreurs-techniques")

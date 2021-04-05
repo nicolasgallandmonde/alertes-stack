@@ -77,9 +77,14 @@ def production():
     toml_files = [f for f in listdir("/confs") if isfile(join("/confs", f)) and ".toml" in f and "_" not in f]
     pipelines_and_schedules = []
     for f in toml_files:
-        p,s = create_pipeline('/confs/'+f)
-        pipelines_and_schedules.append(p)
-        pipelines_and_schedules.append(s)
+        try:
+            p,s = create_pipeline('/confs/'+f)
+            pipelines_and_schedules.append(p)
+            pipelines_and_schedules.append(s)
+        except:
+            con.init_slack()
+            con.send_slack(f"Impossible d'interpréter le fichier {f}", "alertbot-erreurs-techniques")
+        
     
     return pipelines_and_schedules
     
