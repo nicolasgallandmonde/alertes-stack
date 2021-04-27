@@ -114,7 +114,7 @@ def _case_amplitude_funnel(json):
     """Interpret ampllitude json response in the case of a funnel chart """
     dates = jmespath.search('data[0].dayFunnels.xValues', json) 
     values = jmespath.search('data[0].dayFunnels.series', json)
-    rates = list(map(lambda a: 100.*a[1]/a[0] , values))
+    rates = list(map(lambda a: 0 if a[0] == 0 else 100.*a[1]/a[0] , values))
     return list(map(lambda date, rate: [date,rate], dates, rates))
 
 def _case_amplitude_formula(json):

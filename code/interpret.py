@@ -15,13 +15,9 @@ GSHEETS_OUT = "export_google_sheets"
 ALERT_IF = "alert_if"
 ALERT_TEXT = "description"
 ALERT_CHANNEL = "alert_slack_channel"
-SCHEDULING = "schedule_days"
-
-# jobdef = description of a job (one entry of toml file)
 
 # count occurence of entries in the job def
 _count = lambda definitions, jobdef : reduce( lambda nb, cur: nb if cur not in jobdef else nb+1, definitions, 0)
-
 
 #----------------- check : raises human readables exceptions about toml confs
 def check_one_input(jobdef, job_name):
@@ -68,42 +64,26 @@ def raise_alert_or_not(data, condition):
     condition = condition.lower().replace('%','').replace(',','.')
     actual = None
     if "yesterday" in condition:
-        actual = str(get_yesterday(data))
+        actual = get_yesterday(data)
         _condition = condition.replace('yesterday', actual)         
-    if "last_value" in condition:
-        actual = str(data[-1][1])
+    elif "last_value" in condition:
+        actual = str(round(data[-1][1],3))
         _condition = condition.replace('last_value', actual)
-    if "penultimate_value" in condition:
-        actual = str(data[-1][1])
-        _condition = condition.replace('penultimate_value', actual)
+    elif "penultimate_value" in condition or "penultimate" in condition:
+        actual = str(round(data[-2][1],3))
+        _condition = condition.replace('penultimate_value', "penultimate").replace('penultimate', actual)
+    else:
+        raise Exception("no value found in alert condition (ex : last_value, penultimate_value, yesterday, ...")
 
     ext = {'actual': actual}
     formula = 'ext["result"] = ' + _condition
     exec(formula, {}, {'ext': ext })
     return ext
 
-def check_schedule(schedule):
-    """Analyse the schedule input and return True if the job has to be executed today"""
-    def check_one_schedule(schedule):
-        if schedule.lower() == 'everyday':
-            return True
-        if schedule.isdigit():
-            day_of_month = dt.datetime.today().day
-            return int(schedule) == day_of_month
-        if (calendar.day_name[date.today().weekday()]).lower() == schedule.lower():
-            return True
-        return False 
-    schedules = list(map(lambda x: x.strip(), schedule.split(',')))
-    result = reduce(lambda accu, cur: accu | check_one_schedule(cur), schedules, False )
-    return result
 
 #--------------- interpret
 
 def _interpret_job(log, jobdef, job_name):
-    """Interpret the job definition and execute the job"""
-    if SCHEDULING in jobdef and not check_schedule(jobdef[SCHEDULING]):
-        log.info(f"No execution of this job today (scheduling : '{jobdef[SCHEDULING]}')")
-        return
 
     check_one_input(jobdef, job_name)
 
@@ -136,7 +116,7 @@ def _interpret_job(log, jobdef, job_name):
         actual = alert_result["actual"]
         if alert_result['result'] == True:    
             text = '' if ALERT_TEXT not in jobdef else jobdef[ALERT_TEXT] + '   - '
-            text = f"Alert {job_name} : {text} - Alert if :  {_condition} - actual : {actual}"
+            text = f"Alert {job_name} : {text}, alert if :  {_condition} - actual : {actual}"
             log.warning("alert slack déclenchée : "+text)
             try:
                 con.send_slack(channel=jobdef[ALERT_CHANNEL], text=text)
