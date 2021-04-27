@@ -136,7 +136,7 @@ def _interpret_job(log, jobdef, job_name):
         actual = alert_result["actual"]
         if alert_result['result'] == True:    
             text = '' if ALERT_TEXT not in jobdef else jobdef[ALERT_TEXT] + '   - '
-            text = f"Alert {job_name} : {text} Condition :  {_condition} (actual : {actual})"
+            text = f"Alert {job_name} : {text} - Alert if :  {_condition} - actual : {actual}"
             log.warning("alert slack déclenchée : "+text)
             try:
                 con.send_slack(channel=jobdef[ALERT_CHANNEL], text=text)
