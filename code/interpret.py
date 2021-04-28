@@ -64,7 +64,7 @@ def raise_alert_or_not(data, condition):
     condition = condition.lower().replace('%','').replace(',','.')
     actual = None
     if "yesterday" in condition:
-        actual = get_yesterday(data)
+        actual = str(round(get_yesterday(data),3))
         _condition = condition.replace('yesterday', actual)         
     elif "last_value" in condition:
         actual = str(round(data[-1][1],3))
