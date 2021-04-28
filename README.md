@@ -6,19 +6,24 @@ Un dossier "persistance" sera également automatiquement crée.
 
 ## .env
 Créer un fichier .env à la racine avec ces variables initialisées :  
-DAGSTER_PORT=3005  
-METABASE_PORT=3013  
+- DAGSTER_HOST_PORT : host et port de dagster
+- COMPOSE_PROJECT_NAME : configure le nom du projet pour docker compose. Permet de faire cohabiter plusieurs environnements
+- CONF_DIRECTORY : dossier qui contient les toml de configuation des exports / alerets
+  
+exemple :   
+  
+DAGSTER_HOST_PORT=127.0.0.1:3005  
 COMPOSE_PROJECT_NAME=PROD  
+CONF_DIRECTORY=../alerts-conf 
 
-## créer les fichiers de credentials
-Créer un dossier "credentials" dans le dossier "code", et y créer les 4 fichiers suivants :
-- un fichier "AT" : qui contient les credentials AT au format "email:password"
-- un fichier "amplitude" : qui contient les credentials de l'API amplitude au format "user:password"
-- un fichier "google_sheets" : qui contient les credentials google sheets au format JSON
-- un fichier "slack" : qui contient la clé de bot slack "xoxb-......"
+
+
+## créer l fichier de credentials
+Copier le fichier credentials_template.json en .credentials.json et remplir les credentials n�cessaires
 
 # Lancer et arrêter le projet
-Executer le script up.sh ou down.sh pour lancer et arreter les conteneurs.  
+Pour lancer le projet : docker-compose up -d  
+Pour �teindre : docker-compose down  
 Pour entrer en bash dans un conteneur, executer bash.sh  
   
 En cas de redémarrage du conteneur dagster il y a quelques étapes à suivre :   

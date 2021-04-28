@@ -25,7 +25,7 @@ def get_all_toml_files(directory):
         if os.path.isdir(fullPath):
             allFiles = allFiles + get_all_toml_files(fullPath)
         else:
-            if ".toml" in entry and "_" not in entry:
+            if ".toml" in entry and "example.toml" not in entry:
                 allFiles.append(fullPath)                
     return allFiles
 

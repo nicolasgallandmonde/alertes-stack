@@ -15,12 +15,12 @@ services:
       dockerfile: ./Dockerfile
     container_name: dagster_${COMPOSE_PROJECT_NAME}
     ports:
-        - "127.0.0.1:${DAGSTER_PORT}:3000"
-        - "26:22"  
+        - "${DAGSTER_HOST_PORT}:3000"
     volumes:
-        - ../alertes-conf:/confs
+        - ${CONF_DIRECTORY}:/confs
         - ./code:/opt/dagster/app
         - ~/.ssh:/root/.ssh:ro
+        - ./.credentials.json:/.credentials.json
     environment:
       DAGSTER_POSTGRES_USER: "postgres_user"
       DAGSTER_POSTGRES_PASSWORD: "postgres_password"
