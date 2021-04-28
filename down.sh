@@ -1,2 +1,2 @@
 
-docker-compose -f dagster/docker-compose.yml -f metabase/docker-compose.yml down
+docker-compose -f dagster/docker-compose.yml down

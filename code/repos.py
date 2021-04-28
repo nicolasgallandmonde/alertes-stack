@@ -1,8 +1,9 @@
-from dagster import execute_pipeline, pipeline, solid, String, composite_solid, repository, daily_schedule
+from dagster import execute_pipeline, pipeline, solid, String, composite_solid, repository, daily_schedule, schedule
 from datetime import time, datetime
 import toml, json
 from os import listdir
 from os.path import isfile, join
+import os
 import importlib
 import connectors as con # external connectors (slack, gsheets, amplitude, ...)
 importlib.reload(con)
@@ -16,6 +17,17 @@ try:
     repo.remotes.origin.pull('main')
 except:
     print("impossible to git pull")
+
+def get_all_toml_files(directory):
+    allFiles = list()
+    for entry in listdir(directory):
+        fullPath = os.path.join(directory, entry)
+        if os.path.isdir(fullPath):
+            allFiles = allFiles + get_all_toml_files(fullPath)
+        else:
+            if ".toml" in entry and "_" not in entry:
+                allFiles.append(fullPath)                
+    return allFiles
 
 def create_solid(jobdef, name):
     """Closure used to create a solid based on the job description from the toml file """
@@ -56,18 +68,27 @@ def production():
     def create_pipeline(toml_file):
         conf = toml.loads(open(toml_file,'r').read())
         name = name_from_file(toml_file)
+        time = (conf["time"]).replace('h',':') if "time" in conf else '6:00'
+        (hour,minutes) = time.split(':')
+        day_of_week = conf['day_of_week'] if 'day_of_week' in conf else '*'
+        week_days = ['sunday','monday','tuesday','wednesday','thursday', 'friday','saturday','sunday']
+        day_of_week = ','.join(list(map(lambda d: '*' if d=='*' else str(week_days.index(d.lower().strip())), day_of_week.split(','))))
+        day_of_month = str(conf['day_of_month']) if 'day_of_month' in conf else '*'
+        day_of_month = ','.join(list(map(lambda d:d.strip(), day_of_month.split(','))))
+        timezone = 'Europe/Paris' #conf['timezone'] if 'timezone' in conf else 'Etc/GMT' 
+        
 
         @pipeline(name=name)
         def _pipeline():
             for cat in conf:
-                create_composite(conf[cat], cat)
-        
-        @daily_schedule(
+                if type(conf[cat]) == type({}):
+                    create_composite(conf[cat], cat)
+
+        @schedule(
             pipeline_name=name,
             name=name+'_schedule',
-            start_date=datetime(2020, 1, 1),
-            execution_timezone="Europe/Paris",
-            execution_time= time(hour=6, minute=0, second=0, microsecond=0)
+            cron_schedule=f"{minutes} {hour} {day_of_month} * {day_of_week}",
+            execution_timezone=timezone,
         )
         def _schedule(_context):
             return {}
@@ -76,17 +97,17 @@ def production():
 
         
     # loop over toml files
-    toml_files = [f for f in listdir("/confs") if isfile(join("/confs", f)) and ".toml" in f and "_exemple." not in f]
+    toml_files = get_all_toml_files('/confs')
     pipelines_and_schedules = []
     for f in toml_files:
         try:
-            p,s = create_pipeline('/confs/'+f)
+            p,s = create_pipeline(f)
             pipelines_and_schedules.append(p)
             pipelines_and_schedules.append(s)
-        except:
+        except Exception as e:
             con.init_slack()
             con.send_slack(f"Impossible d'interpréter le fichier {f}", "alertbot-erreurs-techniques")
-        
+            raise e
     
     return pipelines_and_schedules
     
