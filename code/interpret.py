@@ -110,11 +110,11 @@ def _interpret_job(log, jobdef, job_name):
     #Management on inputs (amplitude and AT)
     if AMPLITUDE in jobdef:
         print("amplitude")
-        data = con.amplitude_to_array(jobdef[AMPLITUDE])
+        data = con.amplitude_to_array(log, jobdef[AMPLITUDE])
                    
     if AT in jobdef:
         print("AT")
-        data = con.AT_to_array(jobdef[AT])
+        data = con.AT_to_array(log, jobdef[AT])
     log.info("data : " + str(data))
 
     #spreadsheet export
@@ -122,7 +122,7 @@ def _interpret_job(log, jobdef, job_name):
         (ssheet, tab, cell) = (jobdef[GSHEETS_OUT]).split(':')
         email_google = (json.loads(open('/opt/dagster/app/credentials/google_sheets', 'r').read()))["client_email"]
         try:
-            con.send_google_sheet(ssheet, tab, cell, data)
+            con.send_google_sheet(log, ssheet, tab, cell, data)
         except Exception as e:            
             raise Exception( f"Erreur lors de l'enregistrement dans la spreadsheet. Vérifiez que le spreadsheet {ssheet} et l'onglet {tab} existent bien, que la cellule {cell} est accessible, et que la spreadsheet est bien partagée avec l'adresse mail : {email_google}", e)
         log.info(f"data exportées dans : {ssheet} => {tab} => {cell}")
@@ -139,7 +139,7 @@ def _interpret_job(log, jobdef, job_name):
             text = f"Alert {job_name} : {text} Condition :  {_condition} (actual : {actual})"
             log.warning("alert slack déclenchée : "+text)
             try:
-                con.send_slack(channel=jobdef[ALERT_CHANNEL], text=text)
+                con.send_slack(log, channel=jobdef[ALERT_CHANNEL], text=text)
             except:
                 raise Exception(f"Erreur lors de l'envoi à Slack. Vérifiez que le channel {ALERT_CHANNEL} n'est pas privé")
         else:
@@ -150,7 +150,7 @@ def interpret_job(log, jobdef, job_name):
     try:
         return _interpret_job(log, jobdef, job_name)
     except Exception as err:
-        con.init_slack()
+        con.init_slack(log)
         log.error(f"Impossible d'interpréter le job {job_name}")
         log.error(traceback.format_exc())
-        con.send_slack(f"Impossible d'interpréter le job {job_name}", "alertbot-erreurs-techniques")
+        con.send_slack(log, f"Impossible d'interpréter le job {job_name}", "alertbot-erreurs-techniques")

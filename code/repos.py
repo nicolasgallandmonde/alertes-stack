@@ -11,16 +11,18 @@ importlib.reload(interpret)
 import git
 
 # Au démarrage (refresh dans l'UI de dagster), fait un pull sur le repo git qui contient les configurations
-repo = git.Repo('/confs/')
-repo.remotes.origin.pull('main')
-
+try:
+    repo = git.Repo('/confs/')
+    repo.remotes.origin.pull('main')
+except:
+    print("impossible to git pull")
 
 def create_solid(jobdef, name):
     """Closure used to create a solid based on the job description from the toml file """
     @solid(name=name)
     def solid_template(context, previous=None):
-        con.init_slack()
-        con.init_google_sheets('/opt/dagster/app/credentials/google_sheets')
+        con.init_slack(context.log)
+        con.init_google_sheets(context.log,'/opt/dagster/app/credentials/google_sheets')
         context.log.info('-------'+name)
         context.log.info(str(jobdef))
         interpret.interpret_job(context.log, jobdef, name)
@@ -74,7 +76,7 @@ def production():
 
         
     # loop over toml files
-    toml_files = [f for f in listdir("/confs") if isfile(join("/confs", f)) and ".toml" in f and "_" not in f]
+    toml_files = [f for f in listdir("/confs") if isfile(join("/confs", f)) and ".toml" in f and "_exemple." not in f]
     pipelines_and_schedules = []
     for f in toml_files:
         try:

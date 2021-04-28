@@ -1,9 +1,12 @@
-import jmespath, requests, base64
-userpass = open('/opt/dagster/app/credentials/amplitude','r').read()
+import jmespath, requests, base64, json
+
+def get_credentials():
+    credentials = ""
+userpass = (open('/opt/dagster/app/credentials/amplitude','r').read()).strip()
 encoded_u = base64.b64encode(userpass.encode()).decode()
 headers_amplitude = {"Authorization" : "Basic %s" % encoded_u}
 
-userpass = open('/opt/dagster/app/credentials/AT','r').read()
+userpass = (open('/opt/dagster/app/credentials/AT','r').read()).strip()
 encoded_u = base64.b64encode(userpass.encode()).decode()
 headers_AT = {"Authorization" : "Basic %s" % encoded_u}
 
@@ -15,10 +18,10 @@ from slack import WebClient
 from slack.errors import SlackApiError
 
 _slack = {}
-def init_slack():
-    _slack['client'] = WebClient(token=open('/opt/dagster/app/credentials/slack', 'r').read())
+def init_slack(log):
+    _slack['client'] = WebClient(token=  (open('/opt/dagster/app/credentials/slack', 'r').read()).strip() )
 
-def send_slack(text, channel):
+def send_slack(log, text, channel):
     """Send slack message in a public channel"""
     return _slack['client'].chat_postMessage(
         channel=channel,
@@ -37,7 +40,7 @@ client = None
 sheets = {}
 spreadsheets = {}
 
-def init_google_sheets(credentials_file):
+def init_google_sheets(log, credentials_file):
     """Read credentials in the GSheetsCredentials.json file, and init the connection """
     global client,sheets,spreadsheets
     sheets = {}
@@ -69,7 +72,7 @@ def _exp2D(tab, sheet, cell):
         cell.value = tab [math.floor(i/nbc)] [i%nbc]
     sheet.update_cells(_range)
 
-def send_google_sheet(spreadsheet, sheet, cell, tab):
+def send_google_sheet(log, spreadsheet, sheet, cell, tab):
     """send a 2D array to a specific cell in a specific sheet (by sheet name) in a specific spreadsheet (by spreadsheet name)"""
     _exp2D(tab,_getSheet(_getSpreadsheet(spreadsheet),sheet),cell)
 
@@ -114,7 +117,7 @@ def _case_amplitude_funnel(json):
     """Interpret ampllitude json response in the case of a funnel chart """
     dates = jmespath.search('data[0].dayFunnels.xValues', json) 
     values = jmespath.search('data[0].dayFunnels.series', json)
-    rates = list(map(lambda a: 100.*a[1]/a[0] , values))
+    rates = list(map(lambda a: 0 if a[0]==0 else 100.*a[1]/a[0] , values))
     return list(map(lambda date, rate: [date,rate], dates, rates))
 
 def _case_amplitude_formula(json):
@@ -123,7 +126,7 @@ def _case_amplitude_formula(json):
     values = jmespath.search('data.series[0][*].value', json)
     return list(map(lambda date, value : [date,value], dates, values))
 
-def amplitude_to_array(amplitude_chart_id):
+def amplitude_to_array(log, amplitude_chart_id):
     """Makes the request to amplitude, interpret response, and return a data array. 
     Arg amplitude_chart_id : the chart id you can find in the url of a SAVED chart"""
     url = "https://amplitude.com/api/3/chart/" + amplitude_chart_id + "/query"
@@ -146,12 +149,17 @@ def amplitude_to_array(amplitude_chart_id):
         raise Exception("Type de chart amplitude non géré (ni tunnel simple, ni event segmentation simple)")
 
 #---------------------------- AT
-def AT_to_array(url):
+def AT_to_array(log, url):
     """Makes the request to amplitude, interpret response, and return a data array """
+    url = url.replace('/html/', '/json')
     r = requests.get(url, headers=headers_AT)
     if r.status_code != 200:
         raise Exception (f"Erreur lors de la requête à AT xiti. Erreur {r.status_code}")
-    json = r.json()
+    try:
+        json = r.json()
+    except Exception as e:
+        log.info(r.text)
+        raise e
     data = json['DataFeed'][0]
     col_names = jmespath.search('Columns[*].Label', data)
     col_ids = jmespath.search('Columns[*].Name', data)
