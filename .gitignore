@@ -2,3 +2,4 @@
 code/credentials
 *__pycache__
 *todo
+.credentials.json

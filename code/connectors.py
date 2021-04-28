@@ -1,12 +1,7 @@
-import jmespath, requests, base64
-userpass = open('/opt/dagster/app/credentials/amplitude','r').read()
-encoded_u = base64.b64encode(userpass.encode()).decode()
-headers_amplitude = {"Authorization" : "Basic %s" % encoded_u}
+import jmespath, requests, base64, json
 
-userpass = open('/opt/dagster/app/credentials/AT','r').read()
-encoded_u = base64.b64encode(userpass.encode()).decode()
-headers_AT = {"Authorization" : "Basic %s" % encoded_u}
-
+def get_credentials():
+    return  json.loads(open('/.credentials.json','r').read())
 
 
 #------------------------- Slack
@@ -15,10 +10,10 @@ from slack import WebClient
 from slack.errors import SlackApiError
 
 _slack = {}
-def init_slack():
-    _slack['client'] = WebClient(token=open('/opt/dagster/app/credentials/slack', 'r').read())
+def init_slack(log):
+    _slack['client'] = WebClient(token=(get_credentials())['slack']['xoxb'] )
 
-def send_slack(text, channel):
+def send_slack(log, text, channel):
     """Send slack message in a public channel"""
     return _slack['client'].chat_postMessage(
         channel=channel,
@@ -37,12 +32,12 @@ client = None
 sheets = {}
 spreadsheets = {}
 
-def init_google_sheets(credentials_file):
+def init_google_sheets(log, credentials_file):
     """Read credentials in the GSheetsCredentials.json file, and init the connection """
     global client,sheets,spreadsheets
     sheets = {}
     spreadsheets = {}
-    creds = ServiceAccountCredentials.from_json_keyfile_name(credentials_file, scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_dict( (get_credentials())['google_sheets'], scope)
     client = gspread.authorize(creds)
 
 def _getSheet(spreadsheet, sheetname):
@@ -69,7 +64,7 @@ def _exp2D(tab, sheet, cell):
         cell.value = tab [math.floor(i/nbc)] [i%nbc]
     sheet.update_cells(_range)
 
-def send_google_sheet(spreadsheet, sheet, cell, tab):
+def send_google_sheet(log, spreadsheet, sheet, cell, tab):
     """send a 2D array to a specific cell in a specific sheet (by sheet name) in a specific spreadsheet (by spreadsheet name)"""
     _exp2D(tab,_getSheet(_getSpreadsheet(spreadsheet),sheet),cell)
 
@@ -97,6 +92,9 @@ def clear_google_sheet(spreadsheet, sheet):
             all[i][j] = ' '
     send_google_sheet(spreadsheet, sheet, 'A1', all)
 
+
+
+
 #------------------------------ amplitude
 def _case_amplitude_event_segmentation(json):
     """Interpret ampllitude json response in the case of an event segmentation chart """
@@ -123,9 +121,14 @@ def _case_amplitude_formula(json):
     values = jmespath.search('data.series[0][*].value', json)
     return list(map(lambda date, value : [date,value], dates, values))
 
-def amplitude_to_array(amplitude_chart_id):
+def amplitude_to_array(log, amplitude_chart_id):
     """Makes the request to amplitude, interpret response, and return a data array. 
     Arg amplitude_chart_id : the chart id you can find in the url of a SAVED chart"""
+    credentials_amplitude = (get_credentials())['amplitude']
+    userpass = credentials_amplitude["API_KEY"]+':'+credentials_amplitude["API_SECRET"]
+    encoded_u = base64.b64encode(userpass.encode()).decode()
+    headers_amplitude = {"Authorization" : "Basic %s" % encoded_u}
+
     url = "https://amplitude.com/api/3/chart/" + amplitude_chart_id + "/query"
     r = requests.get(url, headers=headers_amplitude)
     if r.status_code == 404:
@@ -146,12 +149,21 @@ def amplitude_to_array(amplitude_chart_id):
         raise Exception("Type de chart amplitude non géré (ni tunnel simple, ni event segmentation simple)")
 
 #---------------------------- AT
-def AT_to_array(url):
+def AT_to_array(log, url):
     """Makes the request to amplitude, interpret response, and return a data array """
+    url = url.replace('/html/', '/json')
+    credentials = (get_credentials())['AT']
+    userpass = credentials['email']+':'+credentials['password']
+    encoded_u = base64.b64encode(userpass.encode()).decode()
+    headers_AT = {"Authorization" : "Basic %s" % encoded_u}
     r = requests.get(url, headers=headers_AT)
     if r.status_code != 200:
         raise Exception (f"Erreur lors de la requête à AT xiti. Erreur {r.status_code}")
-    json = r.json()
+    try:
+        json = r.json()
+    except Exception as e:
+        log.info(r.text)
+        raise e
     data = json['DataFeed'][0]
     col_names = jmespath.search('Columns[*].Label', data)
     col_ids = jmespath.search('Columns[*].Name', data)

@@ -12,8 +12,11 @@ importlib.reload(interpret)
 import git
 
 # Au démarrage (refresh dans l'UI de dagster), fait un pull sur le repo git qui contient les configurations
-repo = git.Repo('/confs/')
-repo.remotes.origin.pull('main')
+try:
+    repo = git.Repo('/confs/')
+    repo.remotes.origin.pull('main')
+except:
+    print("impossible to git pull")
 
 def get_all_toml_files(directory):
     allFiles = list()
@@ -22,18 +25,16 @@ def get_all_toml_files(directory):
         if os.path.isdir(fullPath):
             allFiles = allFiles + get_all_toml_files(fullPath)
         else:
-            if ".toml" in entry and "_" not in entry:
+            if ".toml" in entry and "example.toml" not in entry:
                 allFiles.append(fullPath)                
     return allFiles
-
-
 
 def create_solid(jobdef, name):
     """Closure used to create a solid based on the job description from the toml file """
     @solid(name=name)
     def solid_template(context, previous=None):
-        con.init_slack()
-        con.init_google_sheets('/opt/dagster/app/credentials/google_sheets')
+        con.init_slack(context.log)
+        con.init_google_sheets(context.log,'/opt/dagster/app/credentials/google_sheets')
         context.log.info('-------'+name)
         context.log.info(str(jobdef))
         interpret.interpret_job(context.log, jobdef, name)
