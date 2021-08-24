@@ -1,29 +1,25 @@
 version: "3.7"
 
 services:
-  dagster_postgresql:
-    image: postgres:11
-    container_name: dagster_postgresql_${COMPOSE_PROJECT_NAME}
-    environment:
-      POSTGRES_USER: "postgres_user"
-      POSTGRES_PASSWORD: "postgres_password"
-      POSTGRES_DB: "postgres_db"
 
-  dagster_dagit:
-    build:
-      context: .
-      dockerfile: ./Dockerfile
-    container_name: dagster_${COMPOSE_PROJECT_NAME}
-    ports:
-        - "${DAGSTER_HOST_PORT}:3000"
+  dagyter:
+    hostname: dagyter
+    image: nicogalland/dagyter
     volumes:
-        - ${CONF_DIRECTORY}:/confs
-        - ./code:/opt/dagster/app
+        - ./alertes-conf:/workspace
+        - ./persistance/dagster:/dagster_db/
+        - ./commons_alerts.py:/python_modules/commons_alerts.py
         - ~/.ssh:/root/.ssh:ro
-        - ./.credentials.json:/.credentials.json
-    environment:
-      DAGSTER_POSTGRES_USER: "postgres_user"
-      DAGSTER_POSTGRES_PASSWORD: "postgres_password"
-      DAGSTER_POSTGRES_DB: "postgres_db"
-    depends_on:
-      - dagster_postgresql
+    ports:
+      - "8502:8501"
+      - "8889:8888"
+      - "3001:3000"
+
+  menu:
+    hostname: menu
+    image: nicogalland/cross-app-menu
+    volumes:
+      - ./urls.conf:/usr/share/nginx/html/environment_settings 
+    ports:
+      - "8080:80"
+

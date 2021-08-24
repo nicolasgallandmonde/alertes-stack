@@ -1,5 +1,5 @@
-.env
-code/credentials
 *__pycache__
-*todo
-.credentials.json
+*.ipynb_checkpoints
+urls.conf
+alertes-conf
+persistance
