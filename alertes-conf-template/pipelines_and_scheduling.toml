@@ -1,0 +1,10 @@
+
+[Alertes_journalieres]
+dag = "Alertes_journalieres.ipynb"
+time = "6:30"
+day_of_week = "tuesday,wednesday,thursday,friday,saturday"
+
+[Alertes_horaires]
+dag = "Alertes_horaires.ipynb"
+time = "9,10,11,12,13,14,15,16,17,18:30"
+day_of_week = "monday,tuesday,wednesday,thursday,friday"

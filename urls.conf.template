@@ -1,0 +1,13 @@
+
+ENTRY_URL=http://x.x.x.x:8080
+
+STREAMLIT_URL=http://x.x.x.x:8502
+STREAMLIT_LOGO=icons/streamlit.svg
+
+DAGSTER_URL=http://x.x.x.x:3001
+DAGSTER_LOGO=icons/dagster.png
+
+JUPYTER_URL=http://x.x.x.x:8889
+JUPYTER_LOGO=icons/jupyter.png
+
+

@@ -9,7 +9,6 @@ services:
         - ./alertes-conf:/workspace
         - ./persistance/dagster:/dagster_db/
         - ./commons_alerts.py:/python_modules/commons_alerts.py
-        - ~/.ssh:/root/.ssh:ro
     ports:
       - "8502:8501"
       - "8889:8888"
